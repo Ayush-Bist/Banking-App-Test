@@ -1,0 +1,15 @@
+services:
+  banking-portal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ayushbist/banking-portal:latest
+    container_name: banking-portal-local
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+.git/
+.gitignore
+k8s/
+tests/
+README.md

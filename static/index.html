@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ApexBank | Intelligent Digital Banking Portal</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="brand">Apex<span>Bank</span> AI</div>
+    <div class="user-badge">Welcome, <strong id="userName">Ayush</strong> | Balance: <strong id="userBalance">$14,500.00</strong></div>
+  </header>
+
+  <main class="container">
+    <!-- Search Optimization Section -->
+    <section class="search-hero">
+      <h1>Smart Financial Search</h1>
+      <p>Search accounts, credit cards, mortgages, and investment portfolios with real-time relevance ranking.</p>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Try 'cashback', 'high yield', 'mortgage', 'travel'..." />
+        <button id="searchBtn">Search</button>
+      </div>
+      <div id="searchSuggestions" class="suggestions"></div>
+    </section>
+
+    <!-- Search Results -->
+    <section class="section">
+      <h2>Catalog & Search Results <span id="resultCount" class="badge">0</span></h2>
+      <div id="searchResults" class="card-grid"></div>
+    </section>
+
+    <!-- AI Recommendations Section -->
+    <section class="section">
+      <h2>Recommended For You</h2>
+      <p class="subtitle">Tailored to your balance, spending habits, and financial goals.</p>
+      <div id="recommendationsGrid" class="card-grid"></div>
+    </section>
+  </main>
+
+  <!-- Floating AI Chatbot -->
+  <div class="chatbot-wrapper">
+    <button id="chatToggle" class="chat-toggle">💬 AI Banking Assistant</button>
+    <div id="chatWindow" class="chat-window hidden">
+      <div class="chat-header">
+        <span>ApexBank AI Advisor</span>
+        <button id="chatClose">✕</button>
+      </div>
+      <div id="chatMessages" class="chat-messages">
+        <div class="msg bot">Hi! Ask me about interest rates, credit cards, transfers, or personalized product recommendations.</div>
+      </div>
+      <div id="chatQuickActions" class="quick-actions"></div>
+      <form id="chatForm" class="chat-input-area">
+        <input type="text" id="chatInput" placeholder="Ask a banking question..." required />
+        <button type="submit">Send</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
