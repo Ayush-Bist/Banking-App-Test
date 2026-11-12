@@ -4,7 +4,7 @@ import httpx
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-app = FastAPI(title="AI Banking Chatbot Microservice", version="1.0.0")
+app = FastAPI(title="AI Banking Chatbot Microservice", version="3.0.0")
 
 CORE_BANKING_URL = os.getenv("CORE_BANKING_URL", "http://core-banking-service:8004")
 
@@ -32,28 +32,33 @@ async def chat_endpoint(payload: ChatRequest):
         faqs = faq_resp.json()
         profile = user_resp.json()
 
-    msg = payload.message.strip().lower()
+        msg = payload.message.strip().lower()
+        reply_text = None
+        actions = ["Check Savings APY", "Recommend a Card", "Mortgage Rates"]
 
-    for entry in faqs:
-        if any(kw in msg for kw in entry["keywords"]):
-            return ChatResponse(
-                reply=entry["answer"],
-                suggested_actions=["Compare Savings Rates", "View My Recommendations", "Check Transfer Limits"],
-            )
+        for entry in faqs:
+            if any(kw in msg for kw in entry["keywords"]):
+                reply_text = entry["answer"]
+                actions = ["Compare Savings Rates", "View My Recommendations", "Check Transfer Limits"]
+                break
 
-    if "recommend" in msg or "best" in msg or "invest" in msg:
-        return ChatResponse(
-            reply=(
+        if not reply_text and ("recommend" in msg or "best" in msg or "invest" in msg):
+            reply_text = (
                 f"Hi {profile['name']}, based on your ${profile['account_balance']:,.2f} balance and dining/travel activity, "
                 "I recommend the Horizon Cashback Platinum Card and SmartWealth Index Portfolio."
-            ),
-            suggested_actions=["Explore SmartWealth", "Apply for Cashback Card"],
+            )
+            actions = ["Explore SmartWealth", "Apply for Cashback Card"]
+
+        if not reply_text:
+            reply_text = (
+                f"Hello {profile['name']}! I'm your ApexBank AI Assistant. I can help you check account balances, "
+                "compare loan/savings rates, freeze a card, or recommend tailored financial products."
+            )
+
+        await client.post(
+            f"{CORE_BANKING_URL}/chat-logs",
+            json={"user_id": payload.user_id, "user_message": payload.message, "bot_reply": reply_text},
+            timeout=5.0,
         )
 
-    return ChatResponse(
-        reply=(
-            f"Hello {profile['name']}! I'm your ApexBank AI Assistant. I can help you check account balances, "
-            "compare loan/savings rates, freeze a card, or recommend tailored financial products."
-        ),
-        suggested_actions=["Check Savings APY", "Recommend a Card", "Mortgage Rates"],
-    )
+        return ChatResponse(reply=reply_text, suggested_actions=actions)

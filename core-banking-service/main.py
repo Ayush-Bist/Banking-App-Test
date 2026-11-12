@@ -1,8 +1,9 @@
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from datetime import datetime, timezone
+from fastapi import FastAPI, HTTPException
 from motor.motor_asyncio import AsyncIOMotorClient
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://mongodb-service:27017")
 DB_NAME = os.getenv("MONGO_DB_NAME", "apex_banking_db")
@@ -67,12 +68,34 @@ DEFAULT_PRODUCTS = [
 
 DEFAULT_USER = {
     "user_id": "user_default",
-    "name": "Ayush",
+    "name": "Ayush Bist",
+    "account_number": "APEX-9042-8810",
     "account_balance": 14500.00,
-    "monthly_spending": {"dining": 620, "travel": 450, "groceries": 510, "utilities": 230},
+    "monthly_spending": {"Dining": 620, "Travel": 450, "Groceries": 510, "Utilities": 230},
     "goals": ["wealth", "cashback", "travel"],
     "existing_products": ["prod-101"],
 }
+
+DEFAULT_TRANSACTIONS = [
+    {
+        "tx_id": "TXN-8841",
+        "user_id": "user_default",
+        "recipient": "Apex High-Yield Interest Credit",
+        "category": "Deposit",
+        "amount": 54.80,
+        "type": "CREDIT",
+        "timestamp": "2026-11-10 09:15 UTC",
+    },
+    {
+        "tx_id": "TXN-8840",
+        "user_id": "user_default",
+        "recipient": "BlueTokai Roasters",
+        "category": "Dining",
+        "amount": 18.50,
+        "type": "DEBIT",
+        "timestamp": "2026-11-09 18:42 UTC",
+    },
+]
 
 DEFAULT_FAQS = [
     {
@@ -93,43 +116,44 @@ DEFAULT_FAQS = [
     },
     {
         "keywords": ["balance", "account", "statement"],
-        "answer": "Your current primary checking & savings combined balance is $14,500.00.",
+        "answer": "Your live account balance is synced directly from MongoDB and displayed on your Dashboard.",
     },
 ]
 
 client = None
 db = None
+DB_MODE = "unknown"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global client, db
+    global client, db, DB_MODE
     try:
         real_client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=2000)
         await real_client.admin.command("ping")
         client = real_client
-        print(f"Connected to real MongoDB at {MONGO_URL}")
+        DB_MODE = "MongoDB (Cluster)"
     except Exception:
         from mongomock_motor import AsyncMongoMockClient
         client = AsyncMongoMockClient()
-        print("Real MongoDB not found locally — using in-memory MongoDB mock")
+        DB_MODE = "MongoDB (In-Memory Mock)"
 
     db = client[DB_NAME]
 
     if await db.products.count_documents({}) == 0:
         await db.products.insert_many(DEFAULT_PRODUCTS)
-
     if await db.users.count_documents({"user_id": "user_default"}) == 0:
         await db.users.insert_one(DEFAULT_USER)
-
     if await db.faqs.count_documents({}) == 0:
         await db.faqs.insert_many(DEFAULT_FAQS)
+    if await db.transactions.count_documents({}) == 0:
+        await db.transactions.insert_many(DEFAULT_TRANSACTIONS)
 
     yield
     client.close()
 
 
-app = FastAPI(title="Core Banking Data Microservice (MongoDB)", version="2.0.0", lifespan=lifespan)
+app = FastAPI(title="Core Banking Data Microservice (MongoDB)", version="3.0.0", lifespan=lifespan)
 
 
 class ChatLog(BaseModel):
@@ -138,10 +162,22 @@ class ChatLog(BaseModel):
     bot_reply: str
 
 
+class EnrollRequest(BaseModel):
+    user_id: str = "user_default"
+    product_id: str
+
+
+class TransferRequest(BaseModel):
+    user_id: str = "user_default"
+    recipient: str = Field(..., min_length=2)
+    category: str = "Transfer"
+    amount: float = Field(..., gt=0)
+
+
 @app.get("/health")
 async def health():
     await db.command("ping")
-    return {"status": "healthy", "service": "core-banking-service", "database": "mongodb-connected"}
+    return {"status": "healthy", "service": "core-banking-service", "database": DB_MODE}
 
 
 @app.get("/products")
@@ -155,6 +191,53 @@ async def get_user_profile(user_id: str):
     return user or await db.users.find_one({"user_id": "user_default"}, {"_id": 0})
 
 
+@app.post("/users/enroll")
+async def enroll_product(payload: EnrollRequest):
+    product = await db.products.find_one({"id": payload.product_id}, {"_id": 0})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    await db.users.update_one(
+        {"user_id": payload.user_id},
+        {"$addToSet": {"existing_products": payload.product_id}},
+    )
+    return {"enrolled": True, "product_name": product["name"], "database": DB_MODE}
+
+
+@app.post("/transfers")
+async def create_transfer(payload: TransferRequest):
+    user = await db.users.find_one({"user_id": payload.user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user["account_balance"] < payload.amount:
+        raise HTTPException(status_code=400, detail="Insufficient balance")
+
+    new_balance = round(user["account_balance"] - payload.amount, 2)
+    await db.users.update_one(
+        {"user_id": payload.user_id},
+        {"$set": {"account_balance": new_balance}},
+    )
+
+    tx_doc = {
+        "tx_id": f"TXN-{int(datetime.now(timezone.utc).timestamp()) % 100000}",
+        "user_id": payload.user_id,
+        "recipient": payload.recipient,
+        "category": payload.category,
+        "amount": round(payload.amount, 2),
+        "type": "DEBIT",
+        "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+    }
+    await db.transactions.insert_one(tx_doc)
+    tx_doc.pop("_id", None)
+    return {"status": "completed", "new_balance": new_balance, "transaction": tx_doc, "database": DB_MODE}
+
+
+@app.get("/transactions/{user_id}")
+async def list_transactions(user_id: str):
+    txs = await db.transactions.find({"user_id": user_id}, {"_id": 0}).to_list(length=50)
+    return list(reversed(txs))
+
+
 @app.get("/faqs")
 async def get_faqs():
     return await db.faqs.find({}, {"_id": 0}).to_list(length=100)
@@ -162,10 +245,15 @@ async def get_faqs():
 
 @app.post("/chat-logs")
 async def save_chat_log(log: ChatLog):
-    await db.chat_logs.insert_one(log.model_dump())
+    doc = {
+        **log.model_dump(),
+        "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+    }
+    await db.chat_logs.insert_one(doc)
     return {"saved": True}
 
 
 @app.get("/chat-logs/{user_id}")
 async def get_chat_logs(user_id: str):
-    return await db.chat_logs.find({"user_id": user_id}, {"_id": 0}).to_list(length=50)
+    logs = await db.chat_logs.find({"user_id": user_id}, {"_id": 0}).to_list(length=50)
+    return list(reversed(logs))

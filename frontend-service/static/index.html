@@ -3,47 +3,230 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ApexBank | Intelligent Digital Banking Portal</title>
+  <title>ApexBank | Enterprise Microservices Banking Portal</title>
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
-  <header class="navbar">
-    <div class="brand">Apex<span>Bank</span> AI</div>
-    <div class="user-badge">Welcome, <strong id="userName">Ayush</strong> | Balance: <strong id="userBalance">$14,500.00</strong></div>
-  </header>
-
-  <main class="container">
-    <section class="search-hero">
-      <h1>Smart Financial Search</h1>
-      <p>Search accounts, credit cards, mortgages, and investment portfolios with real-time relevance ranking.</p>
-      <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Try 'cashback', 'high yield', 'mortgage', 'travel'..." />
-        <button id="searchBtn">Search</button>
+  <div class="app-shell">
+    <!-- Left Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">A</div>
+        <div>
+          <div class="brand-name">Apex<span>Bank</span></div>
+          <div class="brand-sub">Cloud-Native Portal</div>
+        </div>
       </div>
-      <div id="searchSuggestions" class="suggestions"></div>
-    </section>
 
-    <section class="section">
-      <h2>Catalog & Search Results <span id="resultCount" class="badge">0</span></h2>
-      <div id="searchResults" class="card-grid"></div>
-    </section>
+      <nav class="nav-menu">
+        <button class="nav-item active" data-page="dashboard">📊 Overview Dashboard</button>
+        <button class="nav-item" data-page="catalog">🔍 Products & Smart Search</button>
+        <button class="nav-item" data-page="recommendations">✨ AI Advisor & MySQL Audit</button>
+        <button class="nav-item" data-page="ledger">💸 Transfers & MongoDB Ledger</button>
+      </nav>
 
-    <section class="section">
-      <h2>Recommended For You</h2>
-      <p class="subtitle">Tailored to your balance, spending habits, and financial goals.</p>
-      <div id="recommendationsGrid" class="card-grid"></div>
-    </section>
-  </main>
+      <!-- Live Microservice Health Monitor -->
+      <div class="cluster-status">
+        <div class="cluster-title">Microservices Cluster</div>
+        <div id="healthList" class="health-list">Checking pods...</div>
+      </div>
+    </aside>
 
+    <!-- Main Content Area -->
+    <div class="main-wrapper">
+      <header class="topbar">
+        <div>
+          <h1 id="pageTitle">Overview Dashboard</h1>
+          <p id="pageSubtitle" class="muted">Real-time account telemetry powered by 5 microservices</p>
+        </div>
+        <div class="profile-pill">
+          <div>
+            <strong id="topUserName">Ayush Bist</strong>
+            <span id="topAccountNum" class="acct-num">APEX-9042-8810</span>
+          </div>
+          <div class="balance-chip" id="topBalance">$14,500.00</div>
+        </div>
+      </header>
+
+      <div id="toast" class="toast hidden"></div>
+
+      <!-- PAGE 1: OVERVIEW DASHBOARD -->
+      <section id="page-dashboard" class="page active">
+        <div class="kpi-grid">
+          <div class="kpi-card primary-gradient">
+            <span class="kpi-label">Available Balance (MongoDB)</span>
+            <div class="kpi-value" id="dashBalance">$14,500.00</div>
+            <span class="kpi-foot">Account: APEX-9042-8810 • Active</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Enrolled Banking Products</span>
+            <div class="kpi-value" id="dashEnrolledCount">1</div>
+            <span class="kpi-foot">Synced with Core Banking MongoDB</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Personalized AI Matches</span>
+            <div class="kpi-value" id="dashRecCount">3</div>
+            <span class="kpi-foot">Logged in MySQL Recommendations DB</span>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-header">
+              <h3>Monthly Spending Analytics</h3>
+              <span class="tag-pill">MongoDB User Profile</span>
+            </div>
+            <div id="spendingBars" class="spending-list"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h3>Active Enrolled Products</h3>
+              <button class="link-btn" onclick="navigateTo('catalog')">+ Explore More</button>
+            </div>
+            <div id="enrolledProductsList" class="stack-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE 2: PRODUCTS & SMART SEARCH -->
+      <section id="page-catalog" class="page">
+        <div class="search-banner">
+          <h2>Weighted Relevance Product Search</h2>
+          <p>Powered by <code>search-service</code> (Port 8002) querying <code>core-banking-service</code> MongoDB catalog.</p>
+          <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search 'cashback', 'high yield', 'mortgage', 'travel'..." />
+            <button id="searchBtn">Search</button>
+          </div>
+          <div class="filter-tabs" id="categoryTabs">
+            <button class="tab active" data-cat="All">All</button>
+            <button class="tab" data-cat="Savings">Savings</button>
+            <button class="tab" data-cat="Credit Cards">Credit Cards</button>
+            <button class="tab" data-cat="Investments">Investments</button>
+            <button class="tab" data-cat="Loans">Loans</button>
+            <button class="tab" data-cat="Checking">Checking</button>
+          </div>
+          <div id="searchSuggestions" class="suggestions"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Ranked Catalog Results <span id="resultCount" class="badge">0</span></h3>
+          </div>
+          <div id="searchResults" class="card-grid"></div>
+        </div>
+      </section>
+
+      <!-- PAGE 3: AI RECOMMENDATIONS & MYSQL AUDIT -->
+      <section id="page-recommendations" class="page">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h3>Tailored Financial Recommendations</h3>
+              <p class="muted">Generated by <code>recommendations-service</code> (Port 8003) & persisted in <strong>MySQL</strong>.</p>
+            </div>
+            <span id="mysqlBadge" class="db-badge mysql">MySQL Connected</span>
+          </div>
+          <div id="recommendationsGrid" class="card-grid"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h3>Live MySQL Recommendation Audit Log (<code>recommendation_audits</code>)</h3>
+              <p class="muted">Every impression and accepted offer is stored relationally in MySQL.</p>
+            </div>
+            <button class="btn-secondary" onclick="loadMySqlHistory()">↻ Refresh SQL Table</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>SQL ID</th>
+                  <th>Product</th>
+                  <th>Match Score</th>
+                  <th>Reason</th>
+                  <th>Status</th>
+                  <th>Timestamp</th>
+                </tr>
+              </thead>
+              <tbody id="mysqlHistoryBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE 4: TRANSFERS & MONGODB LEDGER -->
+      <section id="page-ledger" class="page">
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-header">
+              <h3>Instant Funds Transfer</h3>
+              <span class="db-badge mongo">Writes to MongoDB</span>
+            </div>
+            <form id="transferForm" class="form-stack">
+              <label>Recipient Name / Account
+                <input type="text" id="txRecipient" placeholder="e.g., Rahul Sharma / HDFC-4421" required />
+              </label>
+              <label>Category
+                <select id="txCategory">
+                  <option value="Dining">Dining</option>
+                  <option value="Travel">Travel</option>
+                  <option value="Groceries">Groceries</option>
+                  <option value="Utilities">Utilities</option>
+                  <option value="Transfer">General Transfer</option>
+                </select>
+              </label>
+              <label>Amount (USD)
+                <input type="number" id="txAmount" min="1" step="0.01" placeholder="250.00" required />
+              </label>
+              <button type="submit" class="btn-primary">Send Instant Transfer</button>
+            </form>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h3>MongoDB Transaction Ledger</h3>
+              <button class="btn-secondary" onclick="loadLedgerData()">↻ Refresh</button>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>TX ID</th>
+                    <th>Recipient</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody id="mongoTxBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h3>MongoDB AI Chatbot Conversation Logs (<code>chat_logs</code> collection)</h3>
+            <span class="db-badge mongo">Persisted via chatbot-service → core-banking-service</span>
+          </div>
+          <div id="mongoChatLogs" class="stack-list"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Floating AI Banking Chatbot -->
   <div class="chatbot-wrapper">
-    <button id="chatToggle" class="chat-toggle">💬 AI Banking Assistant</button>
+    <button id="chatToggle" class="chat-toggle">💬 ApexAI Advisor</button>
     <div id="chatWindow" class="chat-window hidden">
       <div class="chat-header">
         <span>ApexBank AI Advisor</span>
         <button id="chatClose">✕</button>
       </div>
       <div id="chatMessages" class="chat-messages">
-        <div class="msg bot">Hi! Ask me about interest rates, credit cards, transfers, or personalized product recommendations.</div>
+        <div class="msg bot">Hi Ayush! Ask me about interest rates, cards, transfers, or recommendations.</div>
       </div>
       <div id="chatQuickActions" class="quick-actions"></div>
       <form id="chatForm" class="chat-input-area">
