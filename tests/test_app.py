@@ -1,30 +1,42 @@
+import importlib.util
+import os
 from fastapi.testclient import TestClient
-from app.main import app
+from mongomock_motor import AsyncMongoMockClient
 
-client = TestClient(app)
-
-
-def test_health_endpoint():
-    response = client.get("/health")
-    assert response.status_code == 200
-    assert response.json()["status"] == "healthy"
+ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
 
 
-def test_search_optimization():
-    response = client.get("/api/search?q=cashback")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["count"] >= 1
-    assert "Cashback" in data["results"][0]["name"]
+def load_service(module_name: str, folder_name: str):
+    file_path = os.path.join(ROOT_DIR, folder_name, "main.py")
+    spec = importlib.util.spec_from_file_location(module_name, file_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
-def test_recommendations():
-    response = client.get("/api/recommendations")
-    assert response.status_code == 200
-    assert len(response.json()["recommendations"]) > 0
+core = load_service("core_banking_service", "core-banking-service")
+
+# Replace real Motor client with in-memory MongoDB mock for local pytest
+core.AsyncIOMotorClient = lambda *args, **kwargs: AsyncMongoMockClient()
 
 
-def test_chatbot():
-    response = client.post("/api/chat", json={"message": "What is your savings interest rate?"})
-    assert response.status_code == 200
-    assert "4.75% APY" in response.json()["reply"]
+def test_core_banking_mongodb_endpoints():
+    with TestClient(core.app) as client:
+        health = client.get("/health")
+        assert health.status_code == 200
+        assert health.json()["database"] == "mongodb-connected"
+
+        products = client.get("/products")
+        assert products.status_code == 200
+        assert len(products.json()) == 5
+
+        user = client.get("/users/user_default")
+        assert user.status_code == 200
+        assert user.json()["name"] == "Ayush"
+
+        log = client.post(
+            "/chat-logs",
+            json={"user_id": "user_default", "user_message": "Hi", "bot_reply": "Hello!"},
+        )
+        assert log.status_code == 200
+        assert log.json()["saved"] is True

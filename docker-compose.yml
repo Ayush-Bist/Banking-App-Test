@@ -1,15 +1,67 @@
 services:
-  banking-portal:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: ayushbist/banking-portal:latest
-    container_name: banking-portal-local
+  mongodb-service:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+
+  mysql-service:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpass123
+      - MYSQL_DATABASE=recommendations_db
+      - MYSQL_USER=bankuser
+      - MYSQL_PASSWORD=bankpass
+
+  core-banking-service:
+    build: ./core-banking-service
+    ports:
+      - "8004:8004"
+    environment:
+      - MONGO_URL=mongodb://mongodb-service:27017
+      - MONGO_DB_NAME=apex_banking_db
+    depends_on:
+      - mongodb-service
+
+  search-service:
+    build: ./search-service
+    ports:
+      - "8002:8002"
+    environment:
+      - CORE_BANKING_URL=http://core-banking-service:8004
+    depends_on:
+      - core-banking-service
+
+  recommendations-service:
+    build: ./recommendations-service
+    ports:
+      - "8003:8003"
+    environment:
+      - CORE_BANKING_URL=http://core-banking-service:8004
+      - MYSQL_URL=mysql+pymysql://bankuser:bankpass@mysql-service:3306/recommendations_db
+    depends_on:
+      - core-banking-service
+      - mysql-service
+
+  chatbot-service:
+    build: ./chatbot-service
+    ports:
+      - "8001:8001"
+    environment:
+      - CORE_BANKING_URL=http://core-banking-service:8004
+    depends_on:
+      - core-banking-service
+
+  frontend-service:
+    build: ./frontend-service
     ports:
       - "8000:8000"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+    environment:
+      - CHATBOT_URL=http://chatbot-service:8001
+      - SEARCH_URL=http://search-service:8002
+      - RECOMMENDATIONS_URL=http://recommendations-service:8003
+    depends_on:
+      - chatbot-service
+      - search-service
+      - recommendations-service

@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core-banking-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: core-banking-service
+  template:
+    metadata:
+      labels:
+        app: core-banking-service
+    spec:
+      containers:
+        - name: core-banking
+          image: <YOUR_ACR_NAME>.azurecr.io/core-banking-service:v1
+          ports:
+            - containerPort: 8004
+          env:
+            - name: MONGO_URL
+              value: "mongodb://mongodb-service:27017"
+            - name: MONGO_DB_NAME
+              value: "apex_banking_db"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: core-banking-service
+spec:
+  type: ClusterIP
+  selector:
+    app: core-banking-service
+  ports:
+    - port: 8004
+      targetPort: 8004

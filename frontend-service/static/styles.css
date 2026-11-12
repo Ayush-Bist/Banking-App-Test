@@ -73,7 +73,6 @@ body { background: var(--bg); color: var(--text); line-height: 1.6; }
   padding: 0.45rem 0.7rem; border-radius: 6px; margin-bottom: 0.8rem;
 }
 
-/* Chatbot Widget */
 .chatbot-wrapper { position: fixed; bottom: 24px; right: 24px; z-index: 1000; }
 .chat-toggle {
   background: var(--accent); color: #fff; border: none; padding: 0.9rem 1.3rem;

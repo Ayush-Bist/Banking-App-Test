@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend-service
+  template:
+    metadata:
+      labels:
+        app: frontend-service
+    spec:
+      containers:
+        - name: frontend
+          image: <YOUR_ACR_NAME>.azurecr.io/frontend-service:v1
+          ports:
+            - containerPort: 8000
+          env:
+            - name: CHATBOT_URL
+              value: "http://chatbot-service:8001"
+            - name: SEARCH_URL
+              value: "http://search-service:8002"
+            - name: RECOMMENDATIONS_URL
+              value: "http://recommendations-service:8003"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-loadbalancer
+spec:
+  type: LoadBalancer
+  selector:
+    app: frontend-service
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000

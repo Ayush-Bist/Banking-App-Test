@@ -52,7 +52,6 @@ async function loadRecommendations() {
   `).join("");
 }
 
-// Chatbot Interactions
 const chatToggle = document.getElementById("chatToggle");
 const chatWindow = document.getElementById("chatWindow");
 const chatClose = document.getElementById("chatClose");
@@ -98,6 +97,5 @@ chatForm.addEventListener("submit", (e) => {
 searchBtn.addEventListener("click", () => performSearch(searchInput.value));
 searchInput.addEventListener("input", () => performSearch(searchInput.value));
 
-// Initial Load
 performSearch();
 loadRecommendations();

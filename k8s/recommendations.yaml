@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommendations-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: recommendations-service
+  template:
+    metadata:
+      labels:
+        app: recommendations-service
+    spec:
+      containers:
+        - name: recommendations
+          image: <YOUR_ACR_NAME>.azurecr.io/recommendations-service:v1
+          ports:
+            - containerPort: 8003
+          env:
+            - name: CORE_BANKING_URL
+              value: "http://core-banking-service:8004"
+            - name: MYSQL_URL
+              value: "mysql+pymysql://bankuser:bankpass@mysql-service:3306/recommendations_db"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: recommendations-service
+spec:
+  type: ClusterIP
+  selector:
+    app: recommendations-service
+  ports:
+    - port: 8003
+      targetPort: 8003
